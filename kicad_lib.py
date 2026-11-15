@@ -4,7 +4,8 @@
 import os
 import re
 
-KICAD_DIR = os.environ.get("KICAD_DIR", r"C:\Users\kajiy\AppData\Local\Programs\KiCad\10.0")
+# KiCad のインストール先（環境変数 KICAD_DIR があればそれを使う。既定はユーザーごとの標準インストール先）
+KICAD_DIR = os.environ.get("KICAD_DIR", os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs", "KiCad", "10.0"))
 SYM_DIR = os.path.join(KICAD_DIR, "share", "kicad", "symbols")
 FP_DIR = os.path.join(KICAD_DIR, "share", "kicad", "footprints")
 

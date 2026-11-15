@@ -74,7 +74,7 @@ def main():
 
     out = [f'(kicad_sch (version 20260306) (generator "gen_sch.py") (generator_version "10.0") '
            f'(uuid "{root}") (paper "{paper}")']
-    out.append('(title_block (title "NFC Reader (PN532 + ESP32-C3)") (date "2026-11-15") (rev "0.1"))')
+    out.append('(title_block (title "NFC Reader (PN532 + ESP32-S3)") (date "2026-11-16") (rev "0.2"))')
 
     # --- 埋め込みシンボル定義 ---
     out.append("(lib_symbols")
@@ -98,6 +98,7 @@ def main():
             f'\n\t(property "Footprint" {fp} (at {sx} {sy} 0) (effects (font (size 1.27 1.27)) (hide yes)))'
             f'\n\t(property "Datasheet" "" (at {sx} {sy} 0) (effects (font (size 1.27 1.27)) (hide yes)))'
             f'\n\t(property "MPN" "{p.mpn}" (at {sx} {sy} 0) (effects (font (size 1.27 1.27)) (hide yes)))'
+            f'\n\t(property "LCSC" "{p.lcsc}" (at {sx} {sy} 0) (effects (font (size 1.27 1.27)) (hide yes)))'
         )
         for num, *_ in pins:
             out.append(f'\t(pin "{num}" (uuid "{uid(p.ref, "pin", num)}"))')

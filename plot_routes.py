@@ -12,14 +12,15 @@ from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PCB = os.path.join(HERE, "kicad", "nfc_reader.kicad_pcb")
-OX, OY = 100.0, 100.0
+sys.path.insert(0, HERE)
+from gen_pcb import OX, OY, BW, BH  # noqa: E402  基板の原点とサイズは gen_pcb.py に合わせる
 RF = ("/TX1", "/TX2", "/TXF1", "/TXF2", "/ANTM1", "/ANTM2", "/ANT1", "/ANT2")
 
 
 # 基板を読み込んで図を描く
 def main():
     out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "routes.png")
-    x0, y0, x1, y1 = (float(v) for v in sys.argv[2:6]) if len(sys.argv) >= 6 else (0, 0, 100, 60)
+    x0, y0, x1, y1 = (float(v) for v in sys.argv[2:6]) if len(sys.argv) >= 6 else (0, 0, BW, BH)
     s = 1600 / (x1 - x0)                       # px/mm
     img = Image.new("RGB", (int((x1 - x0) * s), int((y1 - y0) * s)), (20, 20, 20))
     d = ImageDraw.Draw(img)

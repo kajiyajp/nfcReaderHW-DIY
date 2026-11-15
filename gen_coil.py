@@ -1,10 +1,12 @@
-# 作成日: 2026-11-15
+# 作成日: 2026-11-15 ／ 更新: 2026-11-16（端子をコイル左辺の中央に移し、整合部を左右対称に並べられるようにした）
 # 目的: antenna_calc.py と同じ寸法で、NFCコイルのフットプリント（ネットタイ付き）を生成し、
 #       プロジェクト用のライブラリ表（sym-lib-table / fp-lib-table）も書き出す
 #
 # 使い方: python gen_coil.py
-# 構造: F.Cu の矩形スパイラル。内側の端はスルーホール(パッド2)から B.Cu で下側へ引き出す。
-#       端子(パッド1/2)はコイルの左下、外形の2.5mm下に並ぶ。
+# 構造: F.Cu の矩形スパイラル。左辺の中央（y=+TERM_HALF）から始まり、内側へ N 巻きして左辺の中央（y=-TERM_HALF）で終わる。
+#       内側の端はスルーホール(パッド2)から B.Cu で左へ引き出す（橋の配線は gen_pcb.py が引く）。
+#       端子(パッド1/2)はコイル左辺の 2.5mm 外側に、中心線に対して上下対称（間隔 2*TERM_HALF）に並ぶ。
+#       → 整合部の2列（TX1側/TX2側）をまっすぐ横に引いて、そのまま端子に入れられる。
 #       コイル内側は銅ベタ禁止のキープアウト領域にする。
 
 import os
@@ -16,6 +18,9 @@ OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "kicad")
 LIB = os.path.join(OUT, "nfc_reader.pretty")
 NAME = f"NFC_Coil_{ac.A0*1e3:.0f}x{ac.B0*1e3:.0f}_{ac.N}T"
 NS = uuid.UUID("6b1f2c1e-0000-4000-8000-000000000002")
+TERM_HALF = 2.4      # 端子の上下間隔の半分 [mm]（整合部2列の間隔 4.8mm に合わせる。gen_pcb.py もこれを使う）
+TERM_OUT = 2.5       # コイル外形の左辺から端子中心までの距離 [mm]
+A0_MM = ac.A0 * 1e3  # コイル外形の横幅 [mm]（gen_pcb.py が使う）
 _n = [0]
 
 
@@ -32,13 +37,16 @@ def line(a, b, layer, w):
 
 
 # スパイラルの頂点列を返す（フットプリント座標, mm, y下向き）
-def spiral(n, w, g, a0, b0):
+#   左辺 (x=-ax, y=+s) から上へ出発し、時計回りに n 巻きして、左辺の内側 (x=-ax+n*p, y=-s) で終わる
+#   巻数・線長は旧版（左下の角から始まる n 巻き）とほぼ同じ（差は +1mm 程度）なので antenna_calc.py の値はそのまま使える
+def spiral(n, w, g, a0, b0, s):
     p = w + g
     ax, by = a0 / 2 - w / 2, b0 / 2 - w / 2
-    pts = [(-ax, by)]
+    pts = [(-ax, s)]
     for i in range(n):
         d = i * p
         pts += [(-ax + d, -by + d), (ax - d, -by + d), (ax - d, by - d), (-ax + d + p, by - d)]
+    pts.append((-ax + n * p, -s))
     return pts, ax, by, p
 
 
@@ -47,18 +55,18 @@ def main():
     os.makedirs(LIB, exist_ok=True)
     w, g = ac.W * 1e3, ac.G * 1e3
     a0, b0 = ac.A0 * 1e3, ac.B0 * 1e3
-    pts, ax, by, p = spiral(ac.N, w, g, a0, b0)
+    pts, ax, by, p = spiral(ac.N, w, g, a0, b0, TERM_HALF)
     inner = pts[-1]
-    term_y = by + 2.5                       # 端子パッドのY（コイル下外側）
-    pad1 = (-ax, term_y)                    # 外側端の真下
-    pad2_out = (inner[0], term_y)           # 内側端の真下（B.Cu で下へ引き出す）
+    term_x = -a0 / 2 - TERM_OUT              # 端子パッドのX（コイル左辺の外側）
+    pad1 = (term_x, TERM_HALF)               # 外側端の左
+    pad2_out = (term_x, -TERM_HALF)          # 内側端の左（B.Cu で左へ引き出す）
     out = [f'(footprint "{NAME}"',
            '\t(version 20260206) (generator "gen_coil.py") (generator_version "10.0")',
            '\t(layer "F.Cu")',
-           f'\t(descr "NFC 13.56MHz PCB coil {a0:.0f}x{b0:.0f}mm {ac.N} turns, w/g {w}/{g}mm")',
+           f'\t(descr "NFC 13.56MHz PCB coil {a0:.0f}x{b0:.0f}mm {ac.N} turns, w/g {w}/{g}mm, terminals at left center")',
            '\t(tags "NFC antenna coil net tie")',
-           f'\t(property "Reference" "AE**" (at {-ax} {-by - 2} 0) (layer "F.SilkS") (uuid "{uid()}") (effects (font (size 1 1) (thickness 0.15))))',
-           f'\t(property "Value" "{NAME}" (at 0 0 0) (layer "F.Fab") (uuid "{uid()}") (effects (font (size 1 1) (thickness 0.15))))',
+           f'\t(property "Reference" "AE**" (at {-a0/2 + 3:.2f} {-b0/2 - 1.5:.2f} 0) (layer "F.Fab") (uuid "{uid()}") (effects (font (size 1 1) (thickness 0.15))))',
+           f'\t(property "Value" "{NAME}" (at 0 {b0/2 - 3:.2f} 0) (layer "F.Fab") (uuid "{uid()}") (effects (font (size 1 1) (thickness 0.15))))',
            '\t(attr smd exclude_from_bom)',
            '\t(net_tie_pad_groups "1, 2")']
     # スパイラル本体（F.Cu）
@@ -72,13 +80,16 @@ def main():
     for q in (inner, pad2_out):
         out.append(f'\t(pad "2" thru_hole circle (at {q[0]:.3f} {q[1]:.3f}) (size 0.9 0.9) (drill 0.4) '
                    f'(layers "*.Cu" "*.Mask") (uuid "{uid()}"))')
-    # 外形（シルク・コートヤード）
+    # 外形（シルク）。端子の引き出し部分は空けておく
     hx, hy = a0 / 2 + 0.5, b0 / 2 + 0.5
-    box = [(-hx, -hy), (hx, -hy), (hx, hy), (-hx, hy), (-hx, -hy)]
-    for a, b in zip(box, box[1:]):
-        out.append(line(a, b, "F.SilkS", 0.12))
-    cx, cy0, cy1 = hx + 0.5, -(hy + 0.5), term_y + 1.0
-    cbox = [(-cx, cy0), (cx, cy0), (cx, cy1), (-cx, cy1), (-cx, cy0)]
+    gap = TERM_HALF + 1.0
+    silk = [[(-hx, -gap), (-hx, -hy), (hx, -hy), (hx, hy), (-hx, hy), (-hx, gap)]]
+    for poly in silk:
+        for a, b in zip(poly, poly[1:]):
+            out.append(line(a, b, "F.SilkS", 0.12))
+    # コートヤード（端子を含む）
+    cxl, cxr, cy = term_x - 0.6 - 0.25, hx + 0.5, hy + 0.5
+    cbox = [(cxl, -cy), (cxr, -cy), (cxr, cy), (cxl, cy), (cxl, -cy)]
     for a, b in zip(cbox, cbox[1:]):
         out.append(line(a, b, "F.CrtYd", 0.05))
     # コイル内側＋線路の下は銅ベタ禁止（両面）
@@ -97,11 +108,11 @@ def main():
         f.write("\n".join(out) + "\n")
 
     # プロジェクト用ライブラリ表（KiCad 標準ライブラリ＋自作）
-    syms = ["Device", "Connector", "Power_Protection", "Regulator_Linear", "RF_Module", "RF_NFC",
+    syms = ["Device", "Connector", "Connector_Generic", "Power_Protection", "Regulator_Linear", "RF_Module", "RF_NFC",
             "Switch", "Transistor_BJT", "Mechanical", "power"]
-    fps = ["Resistor_SMD", "Capacitor_SMD", "Inductor_SMD", "Connector_USB", "Package_TO_SOT_SMD",
-           "Package_DFN_QFN", "RF_Module", "Button_Switch_SMD", "LED_SMD", "Buzzer_Beeper", "Diode_SMD",
-           "Crystal", "MountingHole"]
+    fps = ["Resistor_SMD", "Capacitor_SMD", "Inductor_SMD", "Connector_USB", "Connector_PinHeader_2.54mm",
+           "Package_TO_SOT_SMD", "Package_DFN_QFN", "RF_Module", "Button_Switch_SMD", "LED_SMD", "Buzzer_Beeper",
+           "Diode_SMD", "Crystal", "MountingHole", "TestPoint"]
     with open(os.path.join(OUT, "sym-lib-table"), "w", encoding="utf8", newline="\n") as f:
         f.write("(sym_lib_table\n  (version 7)\n")
         for s in syms:
@@ -113,7 +124,7 @@ def main():
             f.write(f'  (lib (name "{s}")(type "KiCad")(uri "${{KICAD10_FOOTPRINT_DIR}}/{s}.pretty")(options "")(descr ""))\n')
         f.write('  (lib (name "nfc_reader")(type "KiCad")(uri "${KIPRJMOD}/nfc_reader.pretty")(options "")(descr "自作"))\n')
         f.write(")\n")
-    print(f"生成: {path}（頂点 {len(pts)}、内側端 {inner}）")
+    print(f"生成: {path}（頂点 {len(pts)}、内側端 {inner}、端子 {pad1} / {pad2_out}）")
 
 
 if __name__ == "__main__":

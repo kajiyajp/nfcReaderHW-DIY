@@ -16,7 +16,8 @@ PCB = os.path.join(HERE, "kicad", "nfc_reader.kicad_pcb")
 DSN = os.path.join(HERE, "kicad", "nfc_reader.dsn")
 SES = os.path.join(HERE, "kicad", "nfc_reader.ses")
 TOOLS = os.path.join(os.environ["LOCALAPPDATA"], "freerouting-cli")
-JAVA = os.path.join(TOOLS, "jre", "jdk-25.0.5+8-jre", "bin", "java.exe")   # 持ち運び版JRE 25（jarがJava25向けビルドのため。システム未登録）
+# 持ち運び版JRE 25（jarがJava25向けビルドのため。システム未登録）。環境変数 FREEROUTING_JAVA で上書きできる
+JAVA = os.environ.get("FREEROUTING_JAVA", os.path.join(TOOLS, "jre", "jdk-25.0.5+8-jre", "bin", "java.exe"))
 JAR = os.path.join(TOOLS, "app", "freerouting-2.5.0.jar")
 # FIXME: freerouting-cli.exe（ネイティブ版 v2.5.0）は配線開始直後に UnsupportedFeatureError で停止するため jar 版を使う
 
@@ -27,7 +28,8 @@ def clear_routing(board):
         if not t.IsLocked():          # gen_pcb.py が引いた固定配線（コイルの橋）は残す
             board.Delete(t)
     for z in list(board.Zones()):
-        board.Delete(z)
+        if not z.GetIsRuleArea():     # gen_pcb.py が置いた配線禁止エリア（整合部）は残す
+            board.Delete(z)
 
 
 # 片側の層にしか配線がつながっていないビアを消す（GNDはベタで生きるので残す）。消した数を返す
@@ -50,7 +52,8 @@ def remove_dangling_vias(board):
 # 基板外形いっぱいのGNDベタを1層ぶん追加する
 def add_gnd_zone(board, layer):
     # 外形は gen_pcb.py と同じ定数から作る（SWIGの型変換が不安定なため境界箱APIは使わない）
-    l, t, r, b = (pcbnew.FromMM(v) for v in (100.0, 100.0, 200.0, 160.0))
+    from gen_pcb import OX, OY, BW, BH
+    l, t, r, b = (pcbnew.FromMM(v) for v in (OX, OY, OX + BW, OY + BH))
     z = pcbnew.ZONE(board)
     z.SetLayer(layer)
     z.SetNet(board.FindNet("/GND"))

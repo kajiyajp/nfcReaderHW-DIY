@@ -2,6 +2,7 @@
   (version 7)
   (lib (name "Device")(type "KiCad")(uri "${KICAD10_SYMBOL_DIR}/Device.kicad_sym")(options "")(descr ""))
   (lib (name "Connector")(type "KiCad")(uri "${KICAD10_SYMBOL_DIR}/Connector.kicad_sym")(options "")(descr ""))
+  (lib (name "Connector_Generic")(type "KiCad")(uri "${KICAD10_SYMBOL_DIR}/Connector_Generic.kicad_sym")(options "")(descr ""))
   (lib (name "Power_Protection")(type "KiCad")(uri "${KICAD10_SYMBOL_DIR}/Power_Protection.kicad_sym")(options "")(descr ""))
   (lib (name "Regulator_Linear")(type "KiCad")(uri "${KICAD10_SYMBOL_DIR}/Regulator_Linear.kicad_sym")(options "")(descr ""))
   (lib (name "RF_Module")(type "KiCad")(uri "${KICAD10_SYMBOL_DIR}/RF_Module.kicad_sym")(options "")(descr ""))
