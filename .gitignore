@@ -1,0 +1,21 @@
+# 作成日: 2026-11-15 ／ 目的: 生成物・ログ・個人設定をリポから除外する
+
+# Python
+__pycache__/
+
+# KiCad の個人設定・一時ファイル・バックアップ
+*.kicad_prl
+*.lck
+fp-info-cache
+*-backups/
+
+# 自動配線の中間ファイルとログ（route.py で再生成できる）
+*.dsn
+*.ses
+freerouting*.log
+en/
+
+# チェック結果・書き出し物（KiCad で再生成できる）
+kicad/*.rpt
+kicad/*.net
+kicad/svg/
