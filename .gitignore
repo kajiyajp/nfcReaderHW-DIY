@@ -19,3 +19,6 @@ en/
 kicad/*.rpt
 kicad/*.net
 kicad/svg/
+
+# メーカー規約で再配布の許可がない3Dモデル（手元に置いたときだけ export_3d.py が使う）
+kicad/3d/models/Same_Sky_*.step

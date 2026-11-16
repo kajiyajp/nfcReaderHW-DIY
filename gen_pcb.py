@@ -270,18 +270,6 @@ def add_coil_bridge(board):
     add_track(board, "ANT2", [rel(p2[0].GetPosition()), rel(p2[1].GetPosition())], 0.6, pcbnew.B_Cu)
 
 
-# 社員証をかざす位置の案内（シルク）
-def add_card_guide(board):
-    for txt, y, size in (("社員証をここにかざす", CY - 3.0, 2.2), ("TAP CARD HERE  (3-5cm)", CY + 1.0, 1.5)):
-        t = pcbnew.PCB_TEXT(board)
-        t.SetText(txt)
-        t.SetPosition(pt(CX, y))
-        t.SetLayer(pcbnew.F_SilkS)
-        t.SetTextSize(pcbnew.VECTOR2I_MM(size, size))
-        t.SetTextThickness(pcbnew.FromMM(size * 0.15))
-        board.Add(t)
-
-
 # 配線禁止のルールエリア（ビア・ベタは可）を1つ追加する。rect = (x0, y0, x1, y1) 基板相対 mm
 def add_track_keepout(board, name, layer, rect):
     z = pcbnew.ZONE(board)
@@ -356,7 +344,6 @@ def main():
     add_coil_bridge(board)
     add_rf_routes(board)
     add_module_gnd_vias(board)
-    add_card_guide(board)
     add_rf_keepouts(board)
     for pad_ in board.FindFootprintByReference("J1").Pads():
         if pad_.GetNumber() == "SH":

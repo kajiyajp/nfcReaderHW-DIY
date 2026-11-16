@@ -26,15 +26,22 @@ CLI = os.path.join(KICAD_DIR, "bin", "kicad-cli.exe")
 BOXES = {
     "BZ1": ("CMT-8504-100-SMT_box.step", (-4.25, 4.25), (-4.25, 4.25), 4.0, (0.10, 0.10, 0.10)),     # 8.5×8.5×約4mm
 }
-# 別のモデルに差し替える部品: 参照記号 → (モデルのパス, 位置のずらし量 xyz mm(3D座標=上が+))
+# 別のモデルに差し替える部品: 参照記号 → (モデルのパス, 位置のずらし量 xyz mm(3D座標=上が+), 回転 xyz 度)
 SUBST = {
     # PN532 の HVQFN40 6×6 は、放熱パッドの大きさだけ違う QFN-40 で代用
-    "U1": ("${KICAD10_3DMODEL_DIR}/Package_DFN_QFN.3dshapes/QFN-40-1EP_6x6mm_P0.5mm_EP4.6x4.6mm.step", (0, 0, 0)),
+    "U1": ("${KICAD10_3DMODEL_DIR}/Package_DFN_QFN.3dshapes/QFN-40-1EP_6x6mm_P0.5mm_EP4.6x4.6mm.step", (0, 0, 0), (0, 0, 0)),
     # Espressif 公式モデル（espressif/kicad-libraries、CC-BY-SA 4.0。kicad/3d/models/README.md 参照）。
     # 公式フットプリントでのずらし量は (-7.7, -7.7, 0)。この基板の ESP32-S2-MINI-1 フットプリントはピン位置が
     # 公式より 2.55mm 下（基板座標 +y）にあるので、3D 座標の y をさらに -2.55 する
-    "U2": (os.path.join(MODELS, "ESP32-S3-MINI-1.STEP").replace("\\", "/"), (-7.7, -10.25, 0)),
+    "U2": (os.path.join(MODELS, "ESP32-S3-MINI-1.STEP").replace("\\", "/"), (-7.7, -10.25, 0), (0, 0, 0)),
 }
+# ブザーのメーカー公式モデル（Same Sky、旧 CUI Devices）。再配布の許可が明記されていないのでリポジトリには入れない。
+# 手元に置いたときだけ使い、無ければ上の箱で代用する（取得方法は kicad/3d/models/README.md）
+BZ1_OFFICIAL = os.path.join(MODELS, "Same_Sky_CMT-8504-100-SMT-TR.step")
+if os.path.exists(BZ1_OFFICIAL):
+    # モデルは Y 軸が上向きで作られているので X 軸まわりに -90° 起こす（+90° だと基板の裏に潜る）
+    SUBST["BZ1"] = (BZ1_OFFICIAL.replace("\\", "/"), (0, 0, 0), (-90, 0, 0))
+    del BOXES["BZ1"]
 
 
 # 直方体1個の STEP（AP214）を書く
@@ -124,14 +131,15 @@ def write_box_step(path, xr, yr, h, rgb):
 # 一時コピーの基板で 3D モデルを差し替える
 def prepare_board(tmp_pcb):
     board = pcbnew.LoadBoard(PCB)
-    items = [(r, os.path.join(MODELS, b[0]).replace("\\", "/"), (0, 0, 0)) for r, b in BOXES.items()]
-    items += [(r, path, off) for r, (path, off) in SUBST.items()]
-    for ref, path, off in items:
+    items = [(r, os.path.join(MODELS, b[0]).replace("\\", "/"), (0, 0, 0), (0, 0, 0)) for r, b in BOXES.items()]
+    items += [(r, path, off, rot) for r, (path, off, rot) in SUBST.items()]
+    for ref, path, off, rot in items:
         fp = board.FindFootprintByReference(ref)
         models = fp.Models()
         m = models[0] if len(models) else pcbnew.FP_3DMODEL()
         m.m_Filename = path
         m.m_Offset = pcbnew.VECTOR3D(*off)
+        m.m_Rotation = pcbnew.VECTOR3D(*rot)
         if not len(models):
             models.push_back(m)
     pcbnew.SaveBoard(tmp_pcb, board)
