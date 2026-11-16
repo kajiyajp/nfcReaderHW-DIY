@@ -114,6 +114,7 @@ USB-C ──┬─ ESD(USBLC6) ── D+/D- ────────────
 | `gen_pcb.py` | 基板の外形・部品配置・設計ルール・固定配線（整合部・コイル橋・GNDビア）・配線禁止エリア・かざす位置のシルクを生成 |
 | `route.py` | Freerouting で自動配線し、両面にGNDベタを張る（固定配線と配線禁止エリアは残す） |
 | `plot_routes.py` | 配線確認用の図（routes.png）を描く |
+| `export_3d.py` | 3Dデータ（`kicad/3d/` の STEP・GLB）と3D画像を書き出す。標準ライブラリに3Dモデルが無い ESP32-S3-MINI-1 とブザーは外形寸法を合わせた箱、PN532 は同外形の QFN-40 で代用（元の基板ファイルは書き換えない） |
 | `kicad_lib.py` | KiCadライブラリを読む補助モジュール |
 | `kicad/` | KiCadプロジェクト（回路図、自作フットプリント、KiCad出力のBOM） |
 | `TODO.md` / `glossary.md` | 残作業 / 用語集 |
@@ -128,6 +129,7 @@ python gen_sch.py        # 回路図生成
 & "$env:LOCALAPPDATA\Programs\KiCad\10.0\bin\python.exe" route.py --passes 100   # 自動配線＋GNDベタ
 & "$env:LOCALAPPDATA\Programs\KiCad\10.0\bin\kicad-cli.exe" sch erc kicad\nfc_reader.kicad_sch   # 接続チェック
 & "$env:LOCALAPPDATA\Programs\KiCad\10.0\bin\kicad-cli.exe" pcb drc kicad\nfc_reader.kicad_pcb --severity-all   # 基板チェック
+& "$env:LOCALAPPDATA\Programs\KiCad\10.0\bin\python.exe" export_3d.py   # 3Dデータ（STEP・GLB）と3D画像
 ```
 
 - Freerouting の結果は実行ごとに少し変わる。DRC で未配線や違反が出たら `route.py` をもう一度実行する（rev 0.2 は1〜2回で 0 件になった）
