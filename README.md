@@ -91,9 +91,12 @@ USB-C ──┬─ ESD(USBLC6) ── D+/D- ────────────
 
 ## 6. 製造（FusionPCB）
 
-- 入稿するもの：ガーバー（RS-274X）＋ドリル（Excellon）を zip、BOM（Fusion のテンプレート、型番入り）、CPL（部品の座標・回転・面）
-- KiCad の `.pos` 出力を Fusion の列名に合わせて直す。**回転角のずれ** はプレビューで必ず確認する
-- BOM は `kicad/bom_kicad.csv`（MPN と LCSC 番号入り。未実装の予備パッドと J2 は除外済み）
+- 入稿ファイルは `export_fab.py` で `fab/` に書き出す（座標の原点はすべて基板の左下）
+  - `nfc_reader_gerber.zip`：ガーバー（RS-274X、拡張子 .GTL/.GBL/.GTS/.GBS/.GTO/.GBO/.GTP/.GBP/.GML）＋ドリル（Excellon、.TXT。メッキ穴と穴あけだけの穴を 1 ファイルにまとめる）
+  - `nfc_reader_bom.csv`：Designator, MPN, Qty, Link。部品番号はカンマ区切り。実装してもらう部品だけ（未実装・はんだジャンパ・テストポイント・取付穴・コイルは除く）。**型番が未定の受動部品は MPN 欄に「CAP 100n 0402 X7R」のような汎用の仕様を書いている**ので、見積もりで Fusion に汎用品を選んでもらうか、型番を決めて書き換える
+  - `nfc_reader_cpl.csv`：Designator, X, Y, Rotation, Side（mm。列は Seeed の記事「How to Prepare Assembly Drawings and Pick-and-Place Files for Seeed Fusion PCBA」の例に合わせた）。**回転角は KiCad の値のまま**。Fusion のビューアで向き（特に PN532・ESP32・USB-C・SOT-23・水晶・ブザー）を必ず確認する
+  - `nfc_reader_assembly_top.pdf`：組立図（同じ記事で CPL と一緒に求められる）。F.Fab（部品番号・外形・1 番ピン）＋F.CrtYd＋外形を A3 に 3 倍で 1 ページ。未実装の部品には×、値は BOM にあるので省略。部品は表面だけなので裏面の図はない
+- KiCad 全体の部品表は `kicad/bom_kicad.csv`（MPN と LCSC 番号入り。未実装の予備パッドと J2・J3 は除外済み）
 - PN532 と ESP32-S3-MINI-1 は Fusion が型番で調達する。在庫・価格は見積もりの時点で確認する
 
 ## 7. ファームウェア（概要）
@@ -117,6 +120,7 @@ USB-C ──┬─ ESD(USBLC6) ── D+/D- ────────────
 | `route.py` | Freerouting で自動配線し、両面にGNDベタを張る（固定配線と配線禁止エリアは残す） |
 | `plot_routes.py` | 配線確認用の図（routes.png）を描く |
 | `export_3d.py` | 3Dデータ（`kicad/3d/` の STEP・GLB）と3D画像を書き出す。標準ライブラリに3Dモデルが無い部品は、ESP32-S3-MINI-1 を Espressif 公式モデル（出典は kicad/3d/models/README.md）、PN532 を同外形の QFN-40、ブザーを外形寸法だけの箱で代用（元の基板ファイルは書き換えない） |
+| `export_fab.py` | FusionPCB 入稿用のガーバー zip・BOM・CPL・組立図 PDF を `fab/` に書き出す（§6） |
 | `kicad_lib.py` | KiCadライブラリを読む補助モジュール |
 | `kicad/` | KiCadプロジェクト（回路図、自作フットプリント、KiCad出力のBOM） |
 | `TODO.md` / `glossary.md` | 残作業 / 用語集 |
@@ -132,6 +136,7 @@ python gen_sch.py        # 回路図生成
 & "$env:LOCALAPPDATA\Programs\KiCad\10.0\bin\kicad-cli.exe" sch erc kicad\nfc_reader.kicad_sch   # 接続チェック
 & "$env:LOCALAPPDATA\Programs\KiCad\10.0\bin\kicad-cli.exe" pcb drc kicad\nfc_reader.kicad_pcb --severity-all   # 基板チェック
 & "$env:LOCALAPPDATA\Programs\KiCad\10.0\bin\python.exe" export_3d.py   # 3Dデータ（STEP・GLB）と3D画像
+& "$env:LOCALAPPDATA\Programs\KiCad\10.0\bin\python.exe" export_fab.py  # FusionPCB 入稿用（ガーバー zip・BOM・CPL）
 ```
 
 - Freerouting の結果は実行ごとに少し変わる。DRC で未配線や違反が出たら `route.py` をもう一度実行する（rev 0.2 は1〜2回で 0 件になった）

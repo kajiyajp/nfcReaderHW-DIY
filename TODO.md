@@ -24,7 +24,8 @@
 - [ ] 受動部品（R/C）の型番を決める（RF 部の C0/C1/C2 は C0G、±5% 以内）
 - [ ] 回路図と基板の整合チェック（`kicad-cli pcb drc --schematic-parity`）で出る「MPN/LCSC 欄がフットプリントにない」「未接続ピンのネット名」を `gen_pcb.py` 側で揃える（電気的な不一致ではない）
 - [ ] 整合部の裏面（GND ベタ）を横切る自動配線の数本を手配線で迂回させる（裏面も配線禁止にすると Freerouting が引き残すため今は許している）
-- [ ] ガーバー / BOM / CPL を出力 → Fusion のビューアで回転角を確認する
+- [x] ガーバー / BOM / CPL を出力（`export_fab.py` → `fab/`）
+- [ ] Fusion のビューアで CPL の回転角を確認する（PN532・ESP32・USB-C・SOT-23・水晶・ブザー）
 - [ ] FusionPCB で見積もり（PN532 / ESP32-S3-MINI-1-N8 / USB-C 受けの在庫確認）
 - [ ] ケースの設計（天面 2mm 以下、カード位置のくぼみ、金属なし。README §5）
 
