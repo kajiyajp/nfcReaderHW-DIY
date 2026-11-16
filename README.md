@@ -114,7 +114,7 @@ USB-C ──┬─ ESD(USBLC6) ── D+/D- ────────────
 | `gen_pcb.py` | 基板の外形・部品配置・設計ルール・固定配線（整合部・コイル橋・GNDビア）・配線禁止エリア・かざす位置のシルクを生成 |
 | `route.py` | Freerouting で自動配線し、両面にGNDベタを張る（固定配線と配線禁止エリアは残す） |
 | `plot_routes.py` | 配線確認用の図（routes.png）を描く |
-| `export_3d.py` | 3Dデータ（`kicad/3d/` の STEP・GLB）と3D画像を書き出す。標準ライブラリに3Dモデルが無い ESP32-S3-MINI-1 とブザーは外形寸法を合わせた箱、PN532 は同外形の QFN-40 で代用（元の基板ファイルは書き換えない） |
+| `export_3d.py` | 3Dデータ（`kicad/3d/` の STEP・GLB）と3D画像を書き出す。標準ライブラリに3Dモデルが無い部品は、ESP32-S3-MINI-1 を Espressif 公式モデル（出典は kicad/3d/models/README.md）、PN532 を同外形の QFN-40、ブザーを外形寸法だけの箱で代用（元の基板ファイルは書き換えない） |
 | `kicad_lib.py` | KiCadライブラリを読む補助モジュール |
 | `kicad/` | KiCadプロジェクト（回路図、自作フットプリント、KiCad出力のBOM） |
 | `TODO.md` / `glossary.md` | 残作業 / 用語集 |

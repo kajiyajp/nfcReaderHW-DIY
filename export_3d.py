@@ -5,7 +5,7 @@
 #   & "$env:LOCALAPPDATA\Programs\KiCad\10.0\bin\python.exe" export_3d.py
 # 出力: kicad/3d/nfc_reader.step（機構CAD向け）, nfc_reader.glb（ビューア向け）, render_*.png
 #
-# KiCad 10 の標準ライブラリに 3D モデルが無い部品は、外形寸法だけ合わせた代わりの箱（または同寸の別モデル）を使う。
+# KiCad 10 の標準ライブラリに 3D モデルが無い部品は、メーカー公式モデル・同寸の別モデル・外形寸法だけ合わせた箱で代用する。
 # 元の基板ファイルは書き換えず、モデルの差し替えは一時コピーにだけ行う。
 
 import os
@@ -24,12 +24,16 @@ CLI = os.path.join(KICAD_DIR, "bin", "kicad-cli.exe")
 
 # 代わりの箱: 参照記号 → (ファイル名, x範囲, y範囲(3D座標=上が+), 高さ, 色RGB)。寸法はデータシート（概略）に合わせる
 BOXES = {
-    "U2": ("ESP32-S3-MINI-1_box.step", (-7.7, 7.7), (-10.25, 10.25 - 0.5), 2.4, (0.62, 0.64, 0.66)),   # 15.4×20.5×2.4mm
     "BZ1": ("CMT-8504-100-SMT_box.step", (-4.25, 4.25), (-4.25, 4.25), 4.0, (0.10, 0.10, 0.10)),     # 8.5×8.5×約4mm
 }
-# 同じ外形の別モデルに差し替える部品（PN532 の HVQFN40 6×6 は放熱パッドの大きさだけ違う QFN-40 で代用）
+# 別のモデルに差し替える部品: 参照記号 → (モデルのパス, 位置のずらし量 xyz mm(3D座標=上が+))
 SUBST = {
-    "U1": "${KICAD10_3DMODEL_DIR}/Package_DFN_QFN.3dshapes/QFN-40-1EP_6x6mm_P0.5mm_EP4.6x4.6mm.step",
+    # PN532 の HVQFN40 6×6 は、放熱パッドの大きさだけ違う QFN-40 で代用
+    "U1": ("${KICAD10_3DMODEL_DIR}/Package_DFN_QFN.3dshapes/QFN-40-1EP_6x6mm_P0.5mm_EP4.6x4.6mm.step", (0, 0, 0)),
+    # Espressif 公式モデル（espressif/kicad-libraries、CC-BY-SA 4.0。kicad/3d/models/README.md 参照）。
+    # 公式フットプリントでのずらし量は (-7.7, -7.7, 0)。この基板の ESP32-S2-MINI-1 フットプリントはピン位置が
+    # 公式より 2.55mm 下（基板座標 +y）にあるので、3D 座標の y をさらに -2.55 する
+    "U2": (os.path.join(MODELS, "ESP32-S3-MINI-1.STEP").replace("\\", "/"), (-7.7, -10.25, 0)),
 }
 
 
@@ -120,11 +124,14 @@ def write_box_step(path, xr, yr, h, rgb):
 # 一時コピーの基板で 3D モデルを差し替える
 def prepare_board(tmp_pcb):
     board = pcbnew.LoadBoard(PCB)
-    for ref, path in [(r, os.path.join(MODELS, b[0]).replace("\\", "/")) for r, b in BOXES.items()] + list(SUBST.items()):
+    items = [(r, os.path.join(MODELS, b[0]).replace("\\", "/"), (0, 0, 0)) for r, b in BOXES.items()]
+    items += [(r, path, off) for r, (path, off) in SUBST.items()]
+    for ref, path, off in items:
         fp = board.FindFootprintByReference(ref)
         models = fp.Models()
         m = models[0] if len(models) else pcbnew.FP_3DMODEL()
         m.m_Filename = path
+        m.m_Offset = pcbnew.VECTOR3D(*off)
         if not len(models):
             models.push_back(m)
     pcbnew.SaveBoard(tmp_pcb, board)
