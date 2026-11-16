@@ -8,6 +8,7 @@
 #   nfc_reader_bom.csv    … Designator, MPN, Qty, Link（実装してもらう部品だけ。部品番号はカンマ区切り）
 #   nfc_reader_cpl.csv    … Designator, X, Y, Rotation, Side（mm、基板の左下が原点、上が +Y。Seeed の記事の例の列）
 #   nfc_reader_assembly_top.pdf … 組立図（F.Fab＋F.CrtYd＋外形、A3 に 3 倍。未実装には×、値は省略）
+#   nfc_reader_assembly.zip … 注文画面の「実装ファイル」欄用（zip のみ受付）。CPL・組立図・参考の 3D 画像（kicad/3d/render_*.png）
 #
 # 原点: ガーバー・ドリル・CPL のすべてを「基板の左下」を原点に揃える（一時コピーの基板に補助原点を置いて書き出す）。
 # 実装しないもの: 未実装（DNP）、はんだジャンパ（銅箔だけ）、テストポイント（パッドだけ）、取付穴、基板パターンのコイル
@@ -168,6 +169,17 @@ def main():
 
     nbom = write_bom(parts, os.path.join(OUT, "nfc_reader_bom.csv"))
     write_cpl(board, [p.ref for p in parts], os.path.join(OUT, "nfc_reader_cpl.csv"))
+
+    # 実装ファイル欄（zip/rar のみ・1 ファイル）用：CPL・組立図・参考の 3D 画像をまとめる
+    azip = os.path.join(OUT, "nfc_reader_assembly.zip")
+    extra = [os.path.join(HERE, "kicad", "3d", f"render_{s}.png") for s in ("iso", "top")]
+    with zipfile.ZipFile(azip, "w", zipfile.ZIP_DEFLATED) as z:
+        z.write(os.path.join(OUT, "nfc_reader_cpl.csv"), "nfc_reader_cpl.csv")
+        z.write(os.path.join(OUT, "nfc_reader_assembly_top.pdf"), "nfc_reader_assembly_top.pdf")
+        for p in extra:
+            if os.path.exists(p):
+                z.write(p, "reference_3d_" + os.path.basename(p))
+        print("実装ファイル zip:", ", ".join(z.namelist()))
     print("ガーバー:", ", ".join(names))
     print(f"BOM: {nbom} 行（部品 {len(parts)} 個） / CPL: {len(parts)} 行")
     for n in sorted(os.listdir(OUT)):
