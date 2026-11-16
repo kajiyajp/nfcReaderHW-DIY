@@ -1,4 +1,4 @@
-# 作成日: 2026-11-15 ／ 更新: 2026-11-16（MCU を ESP32-S3-MINI-1 に変更、テストポイント・デバッグヘッダ追加、型番決定、
+# 作成日: 2026-11-15 ／ 更新: 2026-11-16（MCU を ESP32-S3-MINI-1 に変更、テストポイント・デバッグヘッダ追加、型番決定（受動部品も）、
 #   RF 測定用のはんだジャンパ JP1/JP2 と測定端子 J3 を追加）
 # 目的: NFCリーダー基板の部品と接続（ネット）の唯一の定義。回路図・基板生成スクリプトはここを読む
 
@@ -154,3 +154,28 @@ add("AE1", "Device:L", "NFC_Coil", ANT_FP, {"1": "ANT1", "2": "ANT2"}, group="rf
 # ===== 取付穴 =====
 for i in range(1, 5):
     add(f"H{i}", "Mechanical:MountingHole", "M3", "MountingHole:MountingHole_3.2mm_M3", {}, group="mech")
+
+# ===== 受動部品の型番（LCSC で仕様と在庫を確認して決めた。2026-11-16） =====
+# (値, フットプリント) → (メーカー型番, LCSC 番号)。型番を書いていない部品にだけ当てる（予備パッドの DNP は対象外）
+#   整合部・EMC・水晶の C は C0G。電源のパスコンは X5R/X7R
+PASSIVE_MPN = {
+    ("10u", C0805): ("CL21A106KAYNNNE", "C15850"),       # Samsung 25V X5R
+    ("100n", C0402): ("CL05B104KO5NNNC", "C1525"),       # Samsung 16V X7R
+    ("1u", C0402): ("CL05A105KA5NQNC", "C52923"),        # Samsung 25V X5R
+    ("4.7u", C0603): ("CL10A475KO8NNNC", "C19666"),      # Samsung 16V X5R
+    ("15p", C0402): ("0402CG150J500NT", "C1548"),        # FH 50V C0G
+    ("1n", C0402): ("0402B102K500NT", "C1523"),          # FH 50V X7R
+    ("220p", C0603): ("0603CG221J500NT", "C156398"),     # FH 50V C0G（C1603 は X7R なので使わない）
+    ("33p", C0603): ("CL10C330JB8NNNC", "C1663"),        # Samsung 50V C0G
+    ("180p", C0603): ("0603CG181J500NT", "C124184"),     # FH 50V C0G
+    ("5.1k", R0402): ("0402WGF5101TCE", "C25905"),       # UNI-ROYAL 1%
+    ("10k", R0402): ("0402WGF1002TCE", "C25744"),
+    ("4.7k", R0402): ("0402WGF4701TCE", "C25900"),
+    ("330", R0402): ("0402WGF3300TCE", "C25104"),
+    ("1k", R0402): ("0402WGF1001TCE", "C11702"),
+    ("2.7k", R0402): ("0402WGF2701TCE", "C25885"),
+    ("1.5", R0603): ("0603WAF150KT5E", "C22769"),        # UNI-ROYAL 1% 100mW
+}
+for _p in PARTS:
+    if not _p.mpn and not _p.dnp and (_p.value, _p.footprint) in PASSIVE_MPN:
+        _p.mpn, _p.lcsc = PASSIVE_MPN[(_p.value, _p.footprint)]

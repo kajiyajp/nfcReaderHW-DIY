@@ -93,7 +93,7 @@ USB-C ──┬─ ESD(USBLC6) ── D+/D- ────────────
 
 - 入稿ファイルは `export_fab.py` で `fab/` に書き出す（座標の原点はすべて基板の左下）
   - `nfc_reader_gerber.zip`：ガーバー（RS-274X、拡張子 .GTL/.GBL/.GTS/.GBS/.GTO/.GBO/.GTP/.GBP/.GML）＋ドリル（Excellon、.TXT。メッキ穴と穴あけだけの穴を 1 ファイルにまとめる）
-  - `nfc_reader_bom.csv`：Designator, MPN, Qty, Link。部品番号はカンマ区切り。実装してもらう部品だけ（未実装・はんだジャンパ・テストポイント・取付穴・コイルは除く）。**型番が未定の受動部品は MPN 欄に「CAP 100n 0402 X7R」のような汎用の仕様を書いている**ので、見積もりで Fusion に汎用品を選んでもらうか、型番を決めて書き換える
+  - `nfc_reader_bom.csv`：Designator, MPN, Qty, Link。部品番号はカンマ区切り。実装してもらう部品だけ（未実装・はんだジャンパ・テストポイント・取付穴・コイルは除く）。受動部品も型番と LCSC のリンク入り（`design.py` の `PASSIVE_MPN`。整合部・EMC・水晶の C は C0G）。型番がない部品が出たときだけ MPN 欄に「CAP 100n 0402 X7R」のような汎用の仕様が入る
   - `nfc_reader_cpl.csv`：Designator, X, Y, Rotation, Side（mm。列は Seeed の記事「How to Prepare Assembly Drawings and Pick-and-Place Files for Seeed Fusion PCBA」の例に合わせた）。**回転角は KiCad の値のまま**。Fusion のビューアで向き（特に PN532・ESP32・USB-C・SOT-23・水晶・ブザー）を必ず確認する
   - `nfc_reader_assembly_top.pdf`：組立図（同じ記事で CPL と一緒に求められる）。F.Fab（部品番号・外形・1 番ピン）＋F.CrtYd＋外形を A3 に 3 倍で 1 ページ。未実装の部品には×、値は BOM にあるので省略。部品は表面だけなので裏面の図はない
 - KiCad 全体の部品表は `kicad/bom_kicad.csv`（MPN と LCSC 番号入り。未実装の予備パッドと J2・J3 は除外済み）
