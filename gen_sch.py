@@ -88,10 +88,11 @@ def main():
     used_nets = set()
     for p, sx, sy, pins in placed:
         is_power = p.ref.startswith("#")
+        is_copper = p.lib.startswith("Jumper:SolderJumper")   # はんだジャンパは銅箔だけで部品がないので部品表に載せない
         fp = f'"{p.footprint}"'
         out.append(
             f'(symbol (lib_id "{p.lib}") (at {sx} {sy} 0) (unit 1) (exclude_from_sim no) '
-            f'(in_bom {"no" if is_power or p.dnp else "yes"}) (on_board {"no" if is_power else "yes"}) '
+            f'(in_bom {"no" if is_power or is_copper or p.dnp else "yes"}) (on_board {"no" if is_power else "yes"}) '
             f'(dnp {"yes" if p.dnp else "no"}) (uuid "{uid(p.ref)}")'
             f'\n\t(property "Reference" "{p.ref}" (at {sx} {snap(sy - 3)} 0) (effects (font (size 1.27 1.27)) {"(hide yes)" if is_power else ""}))'
             f'\n\t(property "Value" "{p.value}" (at {sx} {snap(sy + 3)} 0) (effects (font (size 1.27 1.27))))'

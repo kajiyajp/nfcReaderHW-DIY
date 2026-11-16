@@ -358,6 +358,10 @@
       },
       {
         "netclass": "RF",
+        "pattern": "/TXL?"
+      },
+      {
+        "netclass": "RF",
         "pattern": "/TXF?"
       },
       {

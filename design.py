@@ -1,4 +1,5 @@
-# 作成日: 2026-11-15 ／ 更新: 2026-11-16（MCU を ESP32-S3-MINI-1 に変更、テストポイント・デバッグヘッダ追加、型番決定）
+# 作成日: 2026-11-15 ／ 更新: 2026-11-16（MCU を ESP32-S3-MINI-1 に変更、テストポイント・デバッグヘッダ追加、型番決定、
+#   RF 測定用のはんだジャンパ JP1/JP2 と測定端子 J3 を追加）
 # 目的: NFCリーダー基板の部品と接続（ネット）の唯一の定義。回路図・基板生成スクリプトはここを読む
 
 from dataclasses import dataclass
@@ -134,14 +135,20 @@ add("TP3", "Connector:TestPoint", "GND", TP_FP, {"1": "GND"}, group="nfc")
 # ===== アンテナ整合（左右対称。C25〜C30 は予備パッド=未実装） =====
 for side, tx in (("1", "TX1"), ("2", "TX2")):
     s = int(side)
-    two(f"L{s}", "L", "560n", "Inductor_SMD:L_0805_2012Metric", tx, f"TXF{side}", "rf",
+    two(f"L{s}", "L", "560n", "Inductor_SMD:L_0805_2012Metric", tx, f"TXL{side}", "rf",
         mpn="FHW0805UFR56JST", lcsc="C304279", note="EMC L0（巻線 500mA。積層フェライトの150mA品は避ける）")
+    # 測定用の切り離し（普段は銅箔でつながっている。NanoVNA で測るときはカッターで切り、終わったらはんだで戻す）
+    add(f"JP{s}", "Jumper:SolderJumper_2_Bridged", "Bridged", "Jumper:SolderJumper-2_P1.3mm_Bridged_RoundedPad1.0x1.5mm",
+        {"1": f"TXL{side}", "2": f"TXF{side}"}, group="rf", note="はんだジャンパ（部品なし）。RF 調整時に切る")
     two(f"C{20+s}", "C", "220p", C0603, f"TXF{side}", "GND", "rf", note="EMC C0 (C0G)")
     two(f"C{22+s}", "C", "33p", C0603, f"TXF{side}", f"ANTM{side}", "rf", note="整合 直列C1 (C0G)")
     two(f"C{24+s}", "C", "DNP", C0603, f"TXF{side}", f"ANTM{side}", "rf", dnp=True, note="C1 調整用予備")
     two(f"C{26+s}", "C", "180p", C0603, f"ANTM{side}", "GND", "rf", note="整合 並列C2 (C0G)")
     two(f"C{28+s}", "C", "DNP", C0603, f"ANTM{side}", "GND", "rf", dnp=True, note="C2 調整用予備")
     two(f"R{20+s}", "R", "1.5", R0603, f"ANTM{side}", f"ANT{side}", "rf", note="ダンピング Rq")
+# NanoVNA 接続用（未実装。調整時だけピンヘッダを挿す）。TXF2 / GND / TXF1 を整合部の2列に重ねて並べる
+add("J3", "Connector_Generic:Conn_01x03", "RF_TEST", "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical",
+    {"1": "TXF2", "2": "GND", "3": "TXF1"}, dnp=True, group="rf", note="JP1/JP2 を切って、1:1 バラン経由で 1-3 間を差動で測る")
 add("AE1", "Device:L", "NFC_Coil", ANT_FP, {"1": "ANT1", "2": "ANT2"}, group="rf", note="基板パターン 約1.34uH")
 
 # ===== 取付穴 =====

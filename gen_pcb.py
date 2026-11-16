@@ -1,4 +1,5 @@
-# 作成日: 2026-11-15 ／ 更新: 2026-11-16（ESP32-S3-MINI-1 へ変更、92x52mm に縮小、整合部を手配線で左右対称に固定）
+# 作成日: 2026-11-15 ／ 更新: 2026-11-16（ESP32-S3-MINI-1 へ変更、92x52mm に縮小、整合部を手配線で左右対称に固定。
+#   RF 測定用のはんだジャンパと測定端子を整合部に入れ、99x52mm に）
 # 目的: design.py の定義から KiCad 基板 (kicad/nfc_reader.kicad_pcb) を生成する（外形・部品配置・ネット・設計ルール・RF固定配線）
 #
 # 使い方（KiCad付属のPythonで実行する）:
@@ -30,16 +31,21 @@ OUT = os.path.join(HERE, "kicad", "nfc_reader.kicad_pcb")
 NS_SCH = uuid.UUID("6b1f2c1e-0000-4000-8000-000000000001")   # gen_sch.py と同じ名前空間
 
 OX, OY = 100.0, 100.0          # 基板左上の座標 [mm]
-BW, BH = 92.0, 52.0            # 基板サイズ [mm]（旧 100x60mm）
+BW, BH = 99.0, 52.0            # 基板サイズ [mm]（rev 0.1 は 100x60mm。RF 測定用のジャンパと端子を入れるため 92 → 99mm）
 
 # --- RF 部の基準寸法 ---
-CX, CY = 67.5, 26.0                                # コイル中心
+CX, CY = 74.5, 26.0                                # コイル中心
 ROW2, ROW1 = CY - gen_coil.TERM_HALF, CY + gen_coil.TERM_HALF   # TX2 列（上）/ TX1 列（下）。コイル端子と同じ高さ
 UX = 20.4                                          # PN532 の中心X
 UY = ROW2 + 0.25                                   # 180度回転で TX2(6番) ピンが ROW2 の高さに来る
 PX = UX + 2.94                                     # PN532 右辺パッドの中心X
 # 整合部の部品中心X（PX からの距離）。コートヤードが重ならない最小間隔で詰めてある
-XL, XC0, XC1, XC2, XC2B, XRQ = PX + 5.5, PX + 8.1, PX + 10.4, PX + 12.7, PX + 14.3, PX + 16.6
+#   L0 → 測定用はんだジャンパ JP → 測定端子 J3（TXF2/GND/TXF1 の縦3ピン）→ C0 → C1 → C2 → Rq
+XL = PX + 5.5
+XJP = XL + 1.79 + 1.695                            # L0 のコートヤード右端 + ジャンパのコートヤード半幅
+XJ3 = XJP + 1.695 + 1.815                          # ジャンパ + ピンヘッダのコートヤード半幅
+DX = 7.05                                          # ジャンパと端子を入れたぶん、C0 以降を右へずらす量
+XC0, XC1, XC2, XC2B, XRQ = (PX + v + DX for v in (8.1, 10.4, 12.7, 14.3, 16.6))
 SPARE_C1 = 1.5                                     # C1 予備パッドを列の外側へずらす量
 
 # 部品配置: ref -> (x, y, 回転[度])  ※基板左上からの相対座標 [mm]
@@ -75,7 +81,9 @@ PLACE = {
     "BZ1": (35.5, 39.5, 0),
     "J2": (26.2, 48.5, 90),
     # --- 取付穴 ---
-    "H1": (3.5, 48.5, 0), "H2": (88.5, 3.5, 0), "H3": (88.5, 48.5, 0), "H4": (35.0, 3.5, 0),
+    "H1": (3.5, 48.5, 0), "H2": (BW - 3.5, 3.5, 0), "H3": (BW - 3.5, 48.5, 0), "H4": (35.0, 3.5, 0),
+    # --- RF 測定端子（1番=TXF2 が上の列、3番=TXF1 が下の列に重なる） ---
+    "J3": (XJ3, CY - 2.54, 0),
 }
 
 # 整合部（2列の鏡像）。s = 外側の向き（TX2列=-1=上、TX1列=+1=下）
@@ -84,6 +92,7 @@ for side, row, s in (("1", ROW1, 1), ("2", ROW2, -1)):
     shunt_rot = 90 if s < 0 else 270      # 並列部品の1番パッド（信号側）を列の上に置く向き
     PLACE.update({
         f"L{n}": (XL, row, 0),
+        f"JP{n}": (XJP, row, 0),                          # 測定用はんだジャンパ（1番=L0 側）
         f"C{20+n}": (XC0, row + s * 0.78, shunt_rot),     # EMC C0
         f"C{22+n}": (XC1, row, 0),                        # 整合 C1
         f"C{24+n}": (XC1, row + s * SPARE_C1, 0),         # C1 予備
@@ -93,7 +102,7 @@ for side, row, s in (("1", ROW1, 1), ("2", ROW2, -1)):
     })
 
 # シルクの部品番号を F.Fab（組立図）へ移す小さな受動部品のライブラリ（シルクの重なりを避ける）
-FAB_REF_LIBS = ("Resistor_SMD", "Capacitor_SMD", "Inductor_SMD", "TestPoint", "MountingHole")
+FAB_REF_LIBS = ("Resistor_SMD", "Capacitor_SMD", "Inductor_SMD", "TestPoint", "MountingHole", "Jumper")
 FAB_REF_PARTS = ("U1", "U2", "Y1")   # IC はシルクの外形だけで分かるので、部品番号は組立図へ
 
 
@@ -132,7 +141,7 @@ def add_outline(board):
 # ネットクラス定義: (名前, 線幅, クリアランス, 対象ネットのパターン)
 NETCLASSES = [
     ("Power", 0.25, 0.15, ["/GND", "/+3V3", "/VBUS", "/PN_DVDD"]),   # PN532(0.5mmピッチ)に入れる太さ。USB-Cのパッド間隔に合わせて0.15
-    ("RF", 0.25, 0.15, ["/TX?", "/TXF?", "/ANTM?", "/ANT?"]),        # 整合部は gen_pcb.py が 0.4mm で固定配線する
+    ("RF", 0.25, 0.15, ["/TX?", "/TXL?", "/TXF?", "/ANTM?", "/ANT?"]),   # 整合部は gen_pcb.py が 0.4mm で固定配線する
 ]
 
 
@@ -219,6 +228,10 @@ def add_rf_routes(board):
     tvdd = pad(board, "U1", "5")
     c13a, c13b = pad(board, "C13", "1"), pad(board, "C13", "2")
     add_track(board, "PN_DVDD", [tvdd, (c13a[0], tvdd[1]), c13a], 0.25)
+    # TVDD を裏面経由で DVDD 側へつなぐビア（2列の間からは表面で抜けられない。Freerouting 任せだと引き残すことがある）
+    vd = (c13a[0] - 1.132, c13a[1] + 0.261)
+    add_track(board, "PN_DVDD", [c13a, (c13a[0] - 0.261, vd[1]), vd], 0.25)
+    add_via(board, "PN_DVDD", *vd)
     add_track(board, "GND", [c13b, (PX + 3.9, c13b[1])], 0.3)
     add_via(board, "GND", PX + 3.9, c13b[1])
     # TVSS(3,7番) は内側の放熱パッド(GND)へ短く引く
@@ -234,7 +247,9 @@ def add_rf_routes(board):
         n = int(side)
         c1a, c1b = pad(board, f"C{22+n}", "1"), pad(board, f"C{22+n}", "2")
         sp_a, sp_b = pad(board, f"C{24+n}", "1"), pad(board, f"C{24+n}", "2")
-        add_track(board, f"TXF{side}", [pad(board, f"L{n}", "2"), c1a], W_RF)          # L0 → (C0) → C1
+        jp_a, jp_b = pad(board, f"JP{n}", "1"), pad(board, f"JP{n}", "2")
+        add_track(board, f"TXL{side}", [pad(board, f"L{n}", "2"), jp_a], W_RF)         # L0 → ジャンパ
+        add_track(board, f"TXF{side}", [jp_b, (XJ3, row), c1a], W_RF)                  # ジャンパ → 測定端子 → (C0) → C1
         add_track(board, f"ANTM{side}", [c1b, pad(board, f"R{20+n}", "1")], W_RF)      # C1 → (C2, C2予備) → Rq
         add_track(board, f"TXF{side}", [c1a, sp_a], W_RF)                              # C1 予備（並列）
         add_track(board, f"ANTM{side}", [c1b, sp_b], W_RF)
