@@ -124,6 +124,8 @@ USB-C ──┬─ ESD(USBLC6) ── D+/D- ────────────
 | `export_3d.py` | 3Dデータ（`kicad/3d/` の STEP・GLB）と3D画像を書き出す。標準ライブラリに3Dモデルが無い部品は、ESP32-S3-MINI-1 を Espressif 公式モデル（出典は kicad/3d/models/README.md）、PN532 を同外形の QFN-40、ブザーを外形寸法だけの箱で代用（元の基板ファイルは書き換えない） |
 | `export_fab.py` | FusionPCB 入稿用のガーバー zip・BOM・CPL・組立図 PDF を `fab/` に書き出す（§6） |
 | `kicad_lib.py` | KiCadライブラリを読む補助モジュール |
+| `case/` | 市販の PN532 モジュール V3 ＋ XIAO RP2040 用の 3D プリントケース（STEP / STL と、それを作る FreeCAD スクリプト。`case/README.md`） |
+| `firmware/` | ファームウェア。`xiao_rp2040_pn532_hid/` は手持ちの XIAO RP2040＋市販の PN532 モジュールで作る USB キーボード型の読み取り機（使い方は `firmware/README.md`） |
 | `kicad/` | KiCadプロジェクト（回路図、自作フットプリント、KiCad出力のBOM） |
 | `TODO.md` / `glossary.md` | 残作業 / 用語集 |
 
