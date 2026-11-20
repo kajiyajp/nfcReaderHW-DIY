@@ -16,9 +16,9 @@ freerouting*.log
 en/
 
 # チェック結果・書き出し物（KiCad で再生成できる）
-kicad/*.rpt
-kicad/*.net
-kicad/svg/
+archive/pcb/kicad/*.rpt
+archive/pcb/kicad/*.net
+archive/pcb/kicad/svg/
 
 # メーカー規約で再配布の許可がない3Dモデル（手元に置いたときだけ export_3d.py が使う）
-kicad/3d/models/Same_Sky_*.step
+archive/pcb/kicad/3d/models/Same_Sky_*.step
