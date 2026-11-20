@@ -12,8 +12,8 @@
 //   VCC は 5V でも動くが、先に SDA・SCL の電圧を測る（3.6V 以下ならよい。くわしくは firmware/README.md）
 //   IRQ → D2 は任意。Adafruit PN532 1.3.3 は I2C の応答待ちを状態バイトの読み出しで行い、IRQ を使わない
 //   （古い 1.2 系は IRQ を見ていたので、古い版を使うときはつなぐ）。RSTO はつながなくてよい
-//   ブザー（任意。アクティブブザー＝電圧をかけると決まった高さで鳴るもの）は NPN トランジスタで鳴らす:
-//     D3 → 1kΩ → NPN のベース、エミッタ → GND、コレクタ → ブザーの −、ブザーの ＋ → 5V（くわしくは firmware/README.md）
+//   ブザー（任意。アクティブブザー＝電圧をかけると決まった高さで鳴るもの）は、470Ω を直列に入れて D3 から直接鳴らす:
+//     D3 → 470Ω → ブザーの ＋、ブザーの − → GND（ピンの電流を 7mA 以下に抑え、音も少し小さくなる。くわしくは firmware/README.md）
 // 確認: arduino-cli で rp2040:rp2040:seeed_xiao_rp2040（rp2040 6.3.2、Adafruit PN532 1.3.3）向けにコンパイルが通る（2026-11-16。ブザーを足したあとも警告なしで通る、2026-11-20）
 //       実機（XIAO RP2040 + PN532 モジュール V3、VCC は 3V3 と 5V の両方）で NTAG215 の社員証を読めた（2026-11-19）
 
@@ -31,7 +31,7 @@ const uint8_t PIN_SCL = D5;          // XIAO RP2040 の D5 = GPIO7
 const uint8_t PIN_PN532_IRQ = D2;       // PN532 の IRQ（任意。つながなくても 1.3.3 では動く）
 // ライブラリが RESET のピン番号も要求するため、使っていないピン（D10）を渡す。配線は不要
 const uint8_t PIN_PN532_RESET = D10;
-const uint8_t PIN_BUZZER = D3;          // ブザーを鳴らす NPN トランジスタのベース（HIGH で鳴る）
+const uint8_t PIN_BUZZER = D3;          // ブザー（470Ω 経由。HIGH で鳴る）
 const bool USE_BUZZER = true;           // false にすると音を出さない（LED だけ）
 
 // 1 回のカード探しの待ち時間の上限。探す回数を 1 回に絞っているので、カードがなければ PN532 がすぐ「なし」と返す。

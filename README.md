@@ -30,7 +30,7 @@ PC ──USB-C── XIAO RP2040 ──I2C(SDA=D4, SCL=D5)── PN532 モジュ
 |---|---|---|
 | マイコン | Seeed XIAO RP2040 | USB キーボード（HID）になれる |
 | NFC | PN532 NFC RFID モジュール V3（Amazon ASIN B0H6ZYCJVQ など） | 約 40×43mm。読み取り距離 4〜6cm。スイッチを I2C（SW1=ON、SW2=OFF）にする |
-| ブザー（任意） | アクティブブザー（Amazon ASIN B0CZJ5DGDH）＋ NPN トランジスタ＋ 1kΩ | 読めたら「ピッ」。D3 から鳴らす。配線は [firmware/README.md](firmware/README.md) |
+| ブザー（任意） | アクティブブザー（Amazon ASIN B0CZJ5DGDH）＋ 470Ω（直列） | 読めたら「ピッ」。D3 から鳴らす。配線は [firmware/README.md](firmware/README.md) |
 | ケース | [case/](case/README.md) | 3D プリント（PLA / PETG） |
 
 ### 配線（4 本）
