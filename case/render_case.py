@@ -62,7 +62,7 @@ def actor_cyl(cx, cy, z0, d, h, rgb):
     return a
 
 
-def view(win, vp, actors, cam_pos, title, focal=(43, 25, 9), up=(0, 0, 1)):
+def view(win, vp, actors, cam_pos, title, focal=(51, 28, 9), up=(0, 0, 1)):
     ren = vtkRenderer()
     ren.SetViewport(*vp)
     ren.SetBackground(0.97, 0.97, 0.97)
@@ -91,11 +91,11 @@ if __name__ == "__main__":
     win.SetOffScreenRendering(1)
     win.SetSize(1800, 600)
     # 中身の目安（gen_case.py の最後に「[render]」で表示される値。PN532 は赤い基板、XIAO は黒い基板、ブザーは灰色）
-    pn = actor_box(2.5, 2.5, 12.3, 40.0, 43.0, 1.6, (0.8, 0.15, 0.15))
-    xi = actor_box(62.2, 28.45, 1.6, 21.0, 17.8, 1.0, black)
-    usb = actor_box(76.5, 32.9, 2.6, 7.5, 8.9, 3.2, (0.75, 0.75, 0.75))
-    bz_body = actor_cyl(65.0, 15.2, 1.6, 23.0, 15.0, (0.45, 0.45, 0.45))
-    bz_ears = actor_box(65.0 - 18.0, 15.2 - 3.5, 1.6, 36.0, 7.0, 2.5, (0.45, 0.45, 0.45))
+    pn = actor_box(7.0, 7.0, 12.3, 40.0, 43.0, 1.6, (0.8, 0.15, 0.15))
+    xi = actor_box(79.5, 19.6, 1.6, 21.0, 17.8, 1.0, black)
+    usb = actor_box(79.5 + 21.0 - 7.5 + 0.8, 19.6 + (17.8 - 8.9) / 2, 2.6, 7.5, 8.9, 3.2, (0.75, 0.75, 0.75))
+    bz_body = actor_cyl(62.5, 28.5, 1.6, 23.0, 15.0, (0.45, 0.45, 0.45))
+    bz_ears = actor_box(62.5 - 3.5, 28.5 - 18.0, 1.6, 7.0, 36.0, 2.5, (0.45, 0.45, 0.45))   # 耳は縦向き
     view(win, (0, 0, 1 / 3, 1), [actor_stl("nfc_case_base.stl", blue), pn, xi, usb, bz_body, bz_ears],
          (-40, -80, 100), "base + parts (red: PN532, black: XIAO, gray: buzzer)")
     view(win, (1 / 3, 0, 2 / 3, 1), [actor_stl("nfc_case_lid.stl", orange)],
