@@ -30,6 +30,7 @@ PC ──USB-C── XIAO RP2040 ──I2C(SDA=D4, SCL=D5)── PN532 モジュ
 |---|---|---|
 | マイコン | Seeed XIAO RP2040 | USB キーボード（HID）になれる |
 | NFC | PN532 NFC RFID モジュール V3（Amazon ASIN B0H6ZYCJVQ など） | 約 40×43mm。読み取り距離 4〜6cm。スイッチを I2C（SW1=ON、SW2=OFF）にする |
+| ブザー（任意） | アクティブブザー（Amazon ASIN B0CZJ5DGDH）＋ NPN トランジスタ＋ 1kΩ | 読めたら「ピッ」。D3 から鳴らす。配線は [firmware/README.md](firmware/README.md) |
 | ケース | [case/](case/README.md) | 3D プリント（PLA / PETG） |
 
 ### 配線（4 本）
@@ -62,7 +63,7 @@ IRQ・RSTO はつながなくてよい。5V から取るときの注意は [firm
 3. 書き込んだあとは **USB を挿し直す**（PN532 が通信の途中で固まることがあるため）
 4. メモ帳を開いてカードをかざし、番号と改行が入れば OK
 
-LED の色、シリアル（115200bps）の表示の読み方、うまくいかないときの対処は [firmware/README.md](firmware/README.md) にある。
+LED の色と音（読めたら緑とピッ）、シリアル（115200bps）の表示の読み方、うまくいかないときの対処は [firmware/README.md](firmware/README.md) にある。
 
 ## 5. フォルダ
 
