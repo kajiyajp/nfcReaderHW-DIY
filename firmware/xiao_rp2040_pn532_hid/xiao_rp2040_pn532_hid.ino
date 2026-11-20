@@ -12,6 +12,8 @@
 //   VCC は 5V でも動くが、先に SDA・SCL の電圧を測る（3.6V 以下ならよい。くわしくは firmware/README.md）
 //   IRQ → D2 は任意。Adafruit PN532 1.3.3 は I2C の応答待ちを状態バイトの読み出しで行い、IRQ を使わない
 //   （古い 1.2 系は IRQ を見ていたので、古い版を使うときはつなぐ）。RSTO はつながなくてよい
+//   ブザー（任意。アクティブブザー＝電圧をかけると決まった高さで鳴るもの）は NPN トランジスタで鳴らす:
+//     D3 → 1kΩ → NPN のベース、エミッタ → GND、コレクタ → ブザーの −、ブザーの ＋ → 5V（くわしくは firmware/README.md）
 // 確認: arduino-cli で rp2040:rp2040:seeed_xiao_rp2040（rp2040 6.3.2、Adafruit PN532 1.3.3）向けにコンパイルが通る（2026-11-16）
 //       実機（XIAO RP2040 + PN532 モジュール V3、VCC は 3V3 と 5V の両方）で NTAG215 の社員証を読めた（2026-11-19）
 
@@ -29,6 +31,8 @@ const uint8_t PIN_SCL = D5;          // XIAO RP2040 の D5 = GPIO7
 const uint8_t PIN_PN532_IRQ = D2;       // PN532 の IRQ（任意。つながなくても 1.3.3 では動く）
 // ライブラリが RESET のピン番号も要求するため、使っていないピン（D10）を渡す。配線は不要
 const uint8_t PIN_PN532_RESET = D10;
+const uint8_t PIN_BUZZER = D3;          // ブザーを鳴らす NPN トランジスタのベース（HIGH で鳴る）
+const bool USE_BUZZER = true;           // false にすると音を出さない（LED だけ）
 
 // 1 回のカード探しの待ち時間の上限。探す回数を 1 回に絞っているので、カードがなければ PN532 がすぐ「なし」と返す。
 // 上限を短くしすぎると、PN532 が探している途中で次の命令を送ることになるので、余裕をもたせる
@@ -48,6 +52,11 @@ uint32_t lastSeenMs = 0;
 
 // かざした人への反応の種類（意味は、下の「かざした人への反応」の説明を読む）
 enum Feedback { FB_SENT, FB_REPEAT, FB_ERROR, FB_OK };
+
+// 音の鳴らし方（意味は、下の「ブザー」の説明を読む）。「鳴らす時間, 止める時間, 鳴らす時間, …」を ms で並べ、0 で終わる
+const uint16_t BEEP_SENT[] = {300, 0};                         // ピッ 0.3 秒
+const uint16_t BEEP_ERROR[] = {100, 100, 100, 100, 100, 0};    // ピピピ 0.1 秒×3
+const uint16_t BEEP_READY[] = {50, 50, 50, 0};                 // ピピ 0.05 秒×2
 
 
 // ---------------------------------------------------------------- 場所の番号（どの読み取り機でかざしたか）
@@ -123,6 +132,9 @@ void handleCommand(String line) {
   EEPROM.put(0, config);
   bool saved = EEPROM.commit();
   Serial.println(saved ? "Saved." : "SAVE FAILED (the setting is kept only until power off).");
+  if (saved) {
+    beep(BEEP_READY);   // 保存できたことを音でも知らせる
+  }
   printLocation();
 }
 
@@ -150,7 +162,7 @@ void pollSerialCommands() {
 //   FB_SENT      … 緑 1 秒（読めて、番号を送った）
 //   FB_REPEAT    … 黄（同じカードをまた読んだが、送らなかった。置いたままの間・離して 1.5 秒以内のかざし直し）
 //   FB_ERROR     … 赤 0.2 秒の点滅（PN532 が見つからない・応答しない。FB_OK が来るまで続く）
-// 圧電ブザーを足すときは、feedback() の中に音を足す
+// 音（ブザー）は、下の「ブザー」のところで鳴らし方を決めている
 // （enum Feedback は、最初の関数より前に要るので、ファイルの上のほうで定義している）
 
 const uint32_t LED_SENT_MS = 1000;     // 緑の時間
@@ -221,14 +233,84 @@ void ledBegin() {
 }
 
 
-// かざした人への反応を出す（いまは LED だけ）
+// ---------------------------------------------------------------- ブザー（音）
+// アクティブブザーなので、音の高さは選べない（ブザーで決まっている）。長さと回数で区別する:
+//   BEEP_SENT  … ピッ 0.3 秒（読めて、番号を送った。LED の緑と同時）
+//   BEEP_ERROR … ピピピ 0.1 秒×3（PN532 が見つからない・応答しなくなったときに 1 回だけ。直るまで LED の赤の点滅で示す）
+//   BEEP_READY … ピピ 0.05 秒×2（起動して使えるようになった。LOC の保存に成功した）
+//   同じカードを読んで送らなかったとき（LED の黄）は鳴らさない（置いたままだと 0.2 秒ごとに起きてうるさいため）
+// 鳴らし方（BEEP_SENT など）は、LOC の設定の処理でも使うので、ファイルの上のほうで定義している
+const uint32_t BEEP_TICK_MS = 10;          // 鳴らし方を進める間隔（短い音 0.05 秒を刻めるように）
+
+const uint16_t *volatile beepRequest = nullptr;   // 次に鳴らす音（loop から入れ、タイマーが受け取る）
+repeating_timer_t beepTimer;
+
+
+// 10ms ごとにタイマーから呼ばれ、鳴らし方の表を 1 段ずつ進める（カードを探している間や、打ち込み中も止まらない）
+bool beepTick(repeating_timer_t *) {
+  static const uint16_t *pattern = nullptr;
+  static uint8_t step = 0;
+  static uint32_t left = 0;     // いまの段の残り時間（ms）
+  const uint16_t *req = beepRequest;
+  if (req) {                    // 新しい音が来たら、鳴っている途中でも最初から鳴らし直す
+    beepRequest = nullptr;
+    pattern = req;
+    step = 0;
+    left = pattern[0];
+  }
+  if (!pattern) {
+    return true;
+  }
+  if (left == 0) {              // この段が終わった → 次の段へ（0 なら鳴らし終わり）
+    step++;
+    left = pattern[step];
+    if (left == 0) {
+      pattern = nullptr;
+      digitalWrite(PIN_BUZZER, LOW);
+      return true;
+    }
+  }
+  digitalWrite(PIN_BUZZER, (step % 2 == 0) ? HIGH : LOW);   // 偶数の段は鳴らす、奇数の段は止める
+  left = (left > BEEP_TICK_MS) ? left - BEEP_TICK_MS : 0;
+  return true;
+}
+
+
+void beepBegin() {
+  pinMode(PIN_BUZZER, OUTPUT);
+  digitalWrite(PIN_BUZZER, LOW);
+  add_repeating_timer_ms(BEEP_TICK_MS, beepTick, nullptr, &beepTimer);
+}
+
+
+// 音を鳴らす（待たない。鳴らすのはタイマーが行う）
+void beep(const uint16_t *pattern) {
+  if (USE_BUZZER) {
+    beepRequest = pattern;
+  }
+}
+
+
+// かざした人への反応を出す（LED と音）
 void feedback(Feedback f) {
   uint32_t now = millis();
   switch (f) {
-    case FB_SENT:   ledSentUntil = now + LED_SENT_MS; break;
-    case FB_REPEAT: ledRepeatUntil = now + LED_REPEAT_MS; break;
-    case FB_ERROR:  ledError = true; break;
-    case FB_OK:     ledError = false; break;
+    case FB_SENT:
+      ledSentUntil = now + LED_SENT_MS;
+      beep(BEEP_SENT);
+      break;
+    case FB_REPEAT:
+      ledRepeatUntil = now + LED_REPEAT_MS;   // 音は鳴らさない
+      break;
+    case FB_ERROR:
+      if (!ledError) {   // 異常になったときだけ鳴らす（直るまで何度も呼ばれるため）
+        beep(BEEP_ERROR);
+      }
+      ledError = true;
+      break;
+    case FB_OK:
+      ledError = false;
+      break;
   }
 }
 
@@ -355,11 +437,13 @@ void setup() {
   printLocation();
   Keyboard.begin();
   ledBegin();
+  beepBegin();
   Wire.setSDA(PIN_SDA);
   Wire.setSCL(PIN_SCL);
   Wire.setTimeout(I2C_TIMEOUT_MS, true);   // 時間切れのときは I2C をやり直す
   Wire.begin();
   startPn532();
+  beep(BEEP_READY);   // 使えるようになったことを音で知らせる
   Serial.println("Ready. Tap a card.");
 }
 
